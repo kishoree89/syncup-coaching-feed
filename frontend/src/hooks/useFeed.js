@@ -1,30 +1,47 @@
 'use client';
 
-// useFeed owns feed state: initial fetch, live socket updates, dedupe, reconnect refresh.
-import { useEffect, useState, useCallback } from 'react';
-import api from '@/lib/api';
+// useFeed owns feed state: initial fetch (with retry), live socket updates,
+// dedupe, and reconnect refresh.
+import { useEffect, useState, useCallback, useRef } from 'react';
+import api, { fetchWithRetry, describeError } from '@/lib/api';
 import { useSocket } from './useSocket';
+
+// If a fetch takes longer than this, we show a "waking up" hint in the loader.
+// Useful on Render free tier where cold starts can take 30-60s.
+const SLOW_THRESHOLD_MS = 3000;
 
 export function useFeed() {
   const [feeds, setFeeds] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [slowLoading, setSlowLoading] = useState(false);
   const [error, setError] = useState(null);
+  const slowTimerRef = useRef(null);
   const socket = useSocket();
 
   const fetchFeeds = useCallback(async () => {
+    setError(null);
+    setLoading(true);
+    setSlowLoading(false);
+
+    // After SLOW_THRESHOLD_MS, flip slowLoading=true so the loader can
+    // show "the server is waking up". Cleared in the finally block.
+    slowTimerRef.current = setTimeout(() => setSlowLoading(true), SLOW_THRESHOLD_MS);
+
     try {
-      setError(null);
-      const { data } = await api.get('/feed');
+      const { data } = await fetchWithRetry(() => api.get('/feed'));
       setFeeds(data.data || []);
     } catch (err) {
-      setError(err.response?.data?.error || err.message || 'Failed to load feeds');
+      setError(describeError(err));
     } finally {
+      clearTimeout(slowTimerRef.current);
       setLoading(false);
+      setSlowLoading(false);
     }
   }, []);
 
   useEffect(() => {
     fetchFeeds();
+    return () => clearTimeout(slowTimerRef.current);
   }, [fetchFeeds]);
 
   useEffect(() => {
@@ -52,5 +69,5 @@ export function useFeed() {
     };
   }, [socket, fetchFeeds]);
 
-  return { feeds, loading, error, refetch: fetchFeeds };
+  return { feeds, loading, slowLoading, error, refetch: fetchFeeds };
 }

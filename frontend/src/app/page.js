@@ -6,7 +6,7 @@ import Loader from '@/components/Loader';
 import ErrorBanner from '@/components/ErrorBanner';
 
 export default function HomePage() {
-  const { feeds, loading, error, refetch } = useFeed();
+  const { feeds, loading, slowLoading, error, refetch } = useFeed();
 
   return (
     <section className="space-y-6">
@@ -15,7 +15,16 @@ export default function HomePage() {
         <p className="text-sm text-slate-500">Updates appear live — no refresh needed.</p>
       </div>
 
-      {loading && <Loader label="Loading feeds…" />}
+      {loading && (
+        <Loader
+          label="Loading feeds…"
+          hint={
+            slowLoading
+              ? 'The server is on a free plan and may be waking up. This can take 30–60 seconds on the first request.'
+              : null
+          }
+        />
+      )}
       <ErrorBanner message={error} onRetry={refetch} />
 
       {!loading && !error && <FeedList feeds={feeds} />}

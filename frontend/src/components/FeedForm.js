@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import api from '@/lib/api';
+import api, { fetchWithRetry, describeError } from '@/lib/api';
 
 export default function FeedForm() {
   const [title, setTitle] = useState('');
@@ -23,13 +23,13 @@ export default function FeedForm() {
 
     setSubmitting(true);
     try {
-      const { data } = await api.post('/feed', { title, content, author });
+      const { data } = await fetchWithRetry(() => api.post('/feed', { title, content, author }));
       setSuccess(`Posted "${data.data.title}". Watch the Home page update live!`);
       setTitle('');
       setContent('');
       setAuthor('');
     } catch (err) {
-      setError(err.response?.data?.error || err.message || 'Failed to post');
+      setError(describeError(err));
     } finally {
       setSubmitting(false);
     }
