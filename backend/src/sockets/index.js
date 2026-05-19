@@ -5,14 +5,17 @@ const logger = require('../utils/logger');
 
 function initSockets(httpServer) {
   // Same comma-separated-list parsing as the Express CORS layer.
-  const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000')
+  // CORS_ORIGIN=* is a temporary "allow everything" knob for debugging.
+  const rawOrigin = process.env.CORS_ORIGIN || 'http://localhost:3000';
+  const allowAll = rawOrigin.trim() === '*';
+  const allowedOrigins = rawOrigin
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
 
   const io = new Server(httpServer, {
     cors: {
-      origin: allowedOrigins,
+      origin: allowAll ? true : allowedOrigins,
       methods: ['GET', 'POST'],
       credentials: true,
     },
