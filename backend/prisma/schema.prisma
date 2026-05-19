@@ -1,6 +1,3 @@
-// Prisma schema for SYNCUP coaching feed.
-// Run: npx prisma migrate dev --name init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,7 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// A single coaching post in the feed.
 model Feed {
   id        String   @id @default(cuid())
   title     String
@@ -18,6 +14,5 @@ model Feed {
   author    String   @default("Coach")
   createdAt DateTime @default(now())
 
-  // We always sort by createdAt DESC, so index it.
   @@index([createdAt])
 }
